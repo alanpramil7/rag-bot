@@ -25,14 +25,14 @@
           buildInputs = [
             pythonEnv
             pkgs.git
+			pkgs.tmux
           ];
 
           shellHook = ''
             echo "🤖 RAG Bot Development Environment 🚀"
             echo "Python version: $(python --version)"
-            python -m venv .venv
-            source .venv/bin/activate
-            pip install -r ./server/requirements.txt
+            python -m venv ./server/venv
+            source ./server/venv/bin/activate
           '';
         };
 
