@@ -1,3 +1,8 @@
 uvicorn
 fastapi
 pydantic-settings
+langchain-text-splitters
+langchain-chroma
+langchain_community
+pypdf
+langchain-huggingface

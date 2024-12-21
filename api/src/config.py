@@ -9,13 +9,23 @@ class Settings(BaseSettings):
     """
 
     # Basic Application Settings
-    APP_NAME: str = "RAG BOT"  # Name of the application
-    APP_VERSION: str = "0.0.1"  # Current version of the application
+    APP_NAME: str = "RAG BOT"
+    APP_VERSION: str = "0.0.1"
     PROJECT_ROOT: Path = Path(__file__).parent.parent  # Root directory of the project
 
     # API Server Settings
     API_HOST: str = "0.0.0.0"  # Host address for the API server (0.0.0.0 allows external access)
     API_PORT: int = 8000  # Port number for the API server
+
+    # Embedding model Settings
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-V2"
+
+    # Database Settings
+    DB_NAME: str = "rag.db"
+
+    # Chroma Settings
+    PERSIST_DIR: Path = PROJECT_ROOT / "data/chroma-db"
+    MODEL_CACHE: Path = PROJECT_ROOT / "cache"
 
     class Config:
         """

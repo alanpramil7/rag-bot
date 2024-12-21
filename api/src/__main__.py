@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import settings
-from pickle import PROTO
+from src.services.indexer import Indexer
+
+indexer = Indexer()
+
 
 def create_app() -> FastAPI:
     """
@@ -38,12 +41,14 @@ def create_app() -> FastAPI:
                     "version": str
                 }
         """
+
         return {
             "Status": "healthy",
             "Version": settings.APP_VERSION
         }
 
     return application
+
 
 app = create_app()
 
