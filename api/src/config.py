@@ -1,5 +1,9 @@
+from typing import Dict, Type
+from langchain_core.document_loaders.base import BaseLoader
 from pydantic_settings import BaseSettings
 from pathlib import Path
+from langchain_community.document_loaders import PyPDFLoader
+
 
 class Settings(BaseSettings):
     """
@@ -27,6 +31,11 @@ class Settings(BaseSettings):
     PERSIST_DIR: Path = PROJECT_ROOT / "data/chroma-db"
     MODEL_CACHE: Path = PROJECT_ROOT / "cache"
 
+    # Supported file type
+    SUPPORTED_FILE_TYPE: Dict[str, Type[BaseLoader]] = {
+        ".pdf": PyPDFLoader
+    }
+
     class Config:
         """
         Pydantic configuration class
@@ -35,6 +44,7 @@ class Settings(BaseSettings):
         """
         case_sensitive = True
         env_file = ".env"
+
 
 # Create a single instance of Settings to be imported by other modules
 settings = Settings()

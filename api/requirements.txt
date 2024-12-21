@@ -3,6 +3,8 @@ fastapi
 pydantic-settings
 langchain-text-splitters
 langchain-chroma
+langchain_core
 langchain_community
 pypdf
 langchain-huggingface
+python-multipart

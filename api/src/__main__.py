@@ -1,10 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import settings
-from src.services.indexer import Indexer
-
-indexer = Indexer()
-
+from src.routes import document
 
 def create_app() -> FastAPI:
     """
@@ -28,14 +25,17 @@ def create_app() -> FastAPI:
         allow_credentials=True
     )
 
+    # Include document router
+    application.include_router(document.router)
+
     # Endpoint to check application health
     @application.get("/check-health")
     def health_check():
         """
-        Endpont to check health
+        Endpoint to check health
 
         Returns:
-            dict: A dictornary containing the application status and version
+            dict: A dictionary containing the application status and version
                 {
                     "Status": str,
                     "version": str
