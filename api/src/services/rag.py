@@ -1,5 +1,5 @@
 from typing import Dict, List
-from src.services.indexer import Indexer
+from src.utils.dependency import get_indexer
 from src.config import settings
 from langchain_ollama import ChatOllama
 from langchain.chains import history_aware_retriever, create_retrieval_chain
@@ -11,7 +11,7 @@ class RAGService():
     """Service class for Retrival-Augmented Generation"""
 
     def __init__(self):
-        self.indexer = Indexer()
+        self.indexer = get_indexer()
         self._initilaize()
 
     def _initilaize(self):

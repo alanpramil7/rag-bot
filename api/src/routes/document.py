@@ -1,18 +1,22 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from pathlib import Path
 from src.config import settings
 from src.services.indexer import Indexer
+from src.utils.dependency import get_indexer
 from src.utils.process_file import process_file
 import tempfile
 import uuid
 import time
 
 router = APIRouter(prefix="/documents", tags=["documents"])
-indexer = Indexer()
 
 
 @router.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+        file: UploadFile = File(...),
+        # Depends(get_indexer) tells FastAPI to inject the Indexer instance
+        indexer: Indexer = Depends(get_indexer)
+):
     """
     Upload and process the file
 
