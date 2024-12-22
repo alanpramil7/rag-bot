@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.0.1"
     PROJECT_ROOT: Path = Path(__file__).parent.parent  # Root directory of the project
 
+    # LLM Settings
+    LLM_MODEL: str = "mistral"
+    LLM_TEMPERATURE: float = 0.5
+
     # API Server Settings
     API_HOST: str = "0.0.0.0"  # Host address for the API server (0.0.0.0 allows external access)
     API_PORT: int = 8000  # Port number for the API server
