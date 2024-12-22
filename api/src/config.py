@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     PERSIST_DIR: Path = PROJECT_ROOT / "data/chroma-db"
     MODEL_CACHE: Path = PROJECT_ROOT / "cache"
 
+    # Log Settings
+    LOG_LEVEL: str = "INFO"
+
     # Supported file type
     SUPPORTED_FILE_TYPE: Dict[str, Type[BaseLoader]] = {
         ".pdf": PyPDFLoader
