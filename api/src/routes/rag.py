@@ -9,11 +9,13 @@ rag_service = RAGService()
 class ChatRequest(BaseModel):
     question: str
     chat_history: Optional[list] = []
+    file_id: str = None
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list
     processing_time: float
+    reformulated_question: str
 
 
 @router.post("/", response_model=ChatResponse)
@@ -34,6 +36,7 @@ async def chat(request: ChatRequest):
         response = await rag_service.generate_response(
             question=request.question,
             chat_history=request.chat_history,
+            file_id=request.file_id
         )
 
         if not response or not isinstance(response, dict):
@@ -45,7 +48,8 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             answer=response.get("answer", "No answer generated"),
             sources=response.get("sources", []),
-            processing_time=response.get("processing_time", 0.0)
+            processing_time=response.get("processing_time", 0.0),
+            reformulated_question=response.get("reformulated_question", "")
         )
 
     except HTTPException as he:

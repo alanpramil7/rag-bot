@@ -1,6 +1,7 @@
 from typing import Dict, List
 from src.utils.dependency import get_indexer
 from src.config import settings
+from src.utils.logger import logger
 from langchain_ollama import ChatOllama
 from langchain.chains import history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -48,72 +49,122 @@ class RAGService():
     async def generate_response(
         self,
         question: str,
-        chat_history: List[Dict] = None
+        file_id: str = None,
+        chat_history: List[Dict] = []
     ):
         """
         Generate a response using RAG
 
         Args:
             question: User's question
+            file_id: Uploaded file id
             chat_history: Previous chat interactions
-            model: Optional model override
-
-        Returns:
-            Dict: Generated response with metadata
         """
+        start_time = datetime.now()
         try:
-            start_time = datetime.now()
-
             chat_history = chat_history or []
 
             if not self.indexer.is_initialized:
                 self.indexer.initialize()
 
-            similar_docs = await self.indexer.similarity_search(question, 5)
+            # Verify vector store is initialized
+            if not hasattr(self.indexer, 'vector_store') or self.indexer.vector_store is None:
+                raise ValueError("Vector store not properly initialized")
 
-            # Create Retrival chain
+            search_kwargs = {
+                "k": 3
+            }
+
+            if file_id:
+                search_kwargs["filter"] = {"file_id": file_id}
+
+            retriever = self.indexer.vector_store.as_retriever(
+                search_type="similarity",
+                search_kwargs=search_kwargs
+            )
+
+            # Create Retrieval chain
             retriever_chain = history_aware_retriever.create_history_aware_retriever(
                 self.llm,
-                self.indexer.vector_store.as_retriever(),
+                retriever,
                 self.context_prompt
             )
 
-            # Create qa chain
-            qa_chain = create_stuff_documents_chain(
-                self.llm,
-                self.qa_prompt
+            # Print input to retriever chain
+            # print("\n=== Input to Retriever Chain ===")
+            # print(f"Original Question: {question}")
+            # print(f"Chat History: {chat_history}")
+
+            # First, get the standalone question
+            context_chain_response = self.llm.invoke(
+                self.context_prompt.format(
+                    input=question,
+                    chat_history=chat_history
+                )
             )
 
-            # create rag chain
-            rag_Chain = create_retrieval_chain(retriever_chain, qa_chain)
+            # print("\n=== Reformulated Question ===")
+            # print(f"New Question: {context_chain_response.content}")
 
-            # Generate response
-            response = rag_Chain.invoke({
+            # Get retriever chain response
+            retriever_response = retriever_chain.invoke({
+                "input": question,
+                "chat_history": chat_history
+            })
+
+            # Store source documents and metadata
+            source_documents = []
+            if isinstance(retriever_response, list):
+                source_documents = retriever_response
+            elif isinstance(retriever_response, dict) and "documents" in retriever_response:
+                source_documents = retriever_response["documents"]
+
+            # Print retrieved documents
+            # print("\n=== Retrieved Documents ===")
+            # for i, doc in enumerate(source_documents):
+            #     print(f"\nDocument {i+1}:")
+            #     print(f"Content: {doc.page_content}")
+            #     print(f"Metadata: {doc.metadata}")
+
+            # Create QA chain and final RAG chain
+            qa_chain = create_stuff_documents_chain(
+                self.llm,
+                self.qa_prompt,
+            )
+            rag_chain = create_retrieval_chain(retriever_chain, qa_chain)
+
+            # Generate final response
+            response = rag_chain.invoke({
                 "input": question,
                 "chat_history": chat_history,
             })
-            # Calculate processing time
+
+            # Print final chain output
+            # print("\n=== Final Chain Output ===")
+            # print(f"Answer: {response}")
+
             processing_time = (datetime.now() - start_time).total_seconds()
 
-            # Format and return response
+            # Prepare source information
+            sources = []
+            for doc in source_documents:
+                source_info = {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                }
+                sources.append(source_info)
+
             return {
                 "answer": response.get("answer", "Failed to generate an answer."),
-                "sources": [doc.metadata for doc in similar_docs],
-                "processing_time": processing_time
-            }
-
-        except Exception as chain_error:
-            print(chain_error)
-            return {
-                "answer": "I encountered an error while processing your question.",
-                "sources": [],
-                "processing_time": (datetime.now() - start_time).total_seconds()
+                "sources": sources,  # Include sources in response
+                "processing_time": processing_time,
+                "reformulated_question": context_chain_response.content  # Include reformulated question
             }
 
         except Exception as e:
-            print(e)
+            logger.error(f"Error generating response: {str(e)}")
             return {
-                "answer": "An error occurred while processing your request.",
+                "answer": "Error while processing your question.",
                 "sources": [],
-                "processing_time": 0.0
+                "processing_time": (datetime.now() - start_time).total_seconds()
             }

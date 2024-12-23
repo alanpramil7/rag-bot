@@ -15,6 +15,7 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -d '{
     "question": "What is the main topic of the document?",
-    "chat_history": []
+    "chat_history": [],
+    "file_id": "6d0305b2-bd79-48d1-b8ab-f9d0018c2a5f"
   }' | jq
 ```
