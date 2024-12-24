@@ -6,6 +6,7 @@ from langchain_ollama import ChatOllama
 from langchain.chains import history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from src.utils.logger import log_time
 from datetime import datetime
 
 class RAGService():
@@ -13,6 +14,7 @@ class RAGService():
 
     def __init__(self):
         self.indexer = get_indexer()
+        self.is_initialized = False
         self._initilaize()
 
     def _initilaize(self):
@@ -26,6 +28,7 @@ class RAGService():
 
         # Setup prompts
         self._setup_prompts()
+        self.is_initialized = True
 
     def _setup_prompts(self):
         """Setup prompt templates"""
@@ -46,6 +49,7 @@ class RAGService():
             ("human", "{input}")
         ])
 
+    @log_time
     async def generate_response(
         self,
         question: str,
@@ -76,7 +80,7 @@ class RAGService():
             }
 
             if file_id:
-                search_kwargs["filter"] = {"file_id": file_id}
+                search_kwargs["filter"] = {"file_id": str(file_id)}
 
             retriever = self.indexer.vector_store.as_retriever(
                 search_type="similarity",
@@ -90,11 +94,6 @@ class RAGService():
                 self.context_prompt
             )
 
-            # Print input to retriever chain
-            # print("\n=== Input to Retriever Chain ===")
-            # print(f"Original Question: {question}")
-            # print(f"Chat History: {chat_history}")
-
             # First, get the standalone question
             context_chain_response = self.llm.invoke(
                 self.context_prompt.format(
@@ -102,9 +101,6 @@ class RAGService():
                     chat_history=chat_history
                 )
             )
-
-            # print("\n=== Reformulated Question ===")
-            # print(f"New Question: {context_chain_response.content}")
 
             # Get retriever chain response
             retriever_response = retriever_chain.invoke({
@@ -119,14 +115,8 @@ class RAGService():
             elif isinstance(retriever_response, dict) and "documents" in retriever_response:
                 source_documents = retriever_response["documents"]
 
-            # Print retrieved documents
-            # print("\n=== Retrieved Documents ===")
-            # for i, doc in enumerate(source_documents):
-            #     print(f"\nDocument {i+1}:")
-            #     print(f"Content: {doc.page_content}")
-            #     print(f"Metadata: {doc.metadata}")
+            logger.debug(f"Retrieved documents count: {len(source_documents)}")
 
-            # Create QA chain and final RAG chain
             qa_chain = create_stuff_documents_chain(
                 self.llm,
                 self.qa_prompt,
@@ -138,10 +128,6 @@ class RAGService():
                 "input": question,
                 "chat_history": chat_history,
             })
-
-            # Print final chain output
-            # print("\n=== Final Chain Output ===")
-            # print(f"Answer: {response}")
 
             processing_time = (datetime.now() - start_time).total_seconds()
 

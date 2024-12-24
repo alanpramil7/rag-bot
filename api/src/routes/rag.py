@@ -1,21 +1,14 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
 from src.services.rag import RAGService
+from src.models.chat import ChatRequest, ChatResponse
+from src.services.session import SessionService
+from src.utils.logger import logger
+from src.services.chat import ChatService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 rag_service = RAGService()
-
-class ChatRequest(BaseModel):
-    question: str
-    chat_history: Optional[list] = []
-    file_id: str = None
-
-class ChatResponse(BaseModel):
-    answer: str
-    sources: list
-    processing_time: float
-    reformulated_question: str
+session_service = SessionService()
+chat_service = ChatService()
 
 
 @router.post("/", response_model=ChatResponse)
@@ -25,18 +18,40 @@ async def chat(request: ChatRequest):
 
     Args:
         request: The chat request containing question and optional parameters
-
-    Returns:
-        ChatResponse: Contains generated response and metadata
-
-    Raises:
-        HTTPException: If processing fails
     """
     try:
+        # Get or create session
+        session_id = request.session_id
+        if not session_id:
+            session_id = session_service.create_session()
+        elif not session_service.get_session(session_id):
+            raise HTTPException(
+                status_code=404,
+                detail="Session not found"
+            )
+        logger.info(f"session_id: {session_id}")
+        logger.info(f"session: {session_service.get_session(session_id)}")
+
+        # Get chat history
+        chat_history = chat_service.get_chat_history(session_id)
+
+        logger.info(f"history : {chat_history}")
+
+        # Get file_id
+        file_id = session_service.get_file_id(session_id)[0] if session_service.get_file_id(session_id) else None
+        logger.info(f"Retrieved file_id from session: {file_id}")
+
+        # Save user message
+        chat_service.save_message(
+            session_id=session_id,
+            role="user",
+            content=request.question
+        )
+
         response = await rag_service.generate_response(
             question=request.question,
-            chat_history=request.chat_history,
-            file_id=request.file_id
+            chat_history=chat_history,
+            file_id=file_id
         )
 
         if not response or not isinstance(response, dict):
@@ -45,11 +60,23 @@ async def chat(request: ChatRequest):
                 detail="Invalid response format from RAG service"
             )
 
+        # Save assistant response
+        chat_service.save_message(
+            session_id=session_id,
+            role="assistant",
+            content=response.get("answer", "No answer generated"),
+            metadata=str({
+                "processing_time": response.get("processing_time", 0.0),
+                "reformulated_question": response.get("reformulated_question", "")
+            })
+        )
+
         return ChatResponse(
             answer=response.get("answer", "No answer generated"),
             sources=response.get("sources", []),
             processing_time=response.get("processing_time", 0.0),
-            reformulated_question=response.get("reformulated_question", "")
+            reformulated_question=response.get("reformulated_question", ""),
+            session_id=session_id,
         )
 
     except HTTPException as he:

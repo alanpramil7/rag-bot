@@ -1,21 +1,25 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from pathlib import Path
+from typing import Optional
 from src.config import settings
 from src.services.indexer import Indexer
 from src.utils.dependency import get_indexer
+from src.services.session import SessionService
 from src.utils.process_file import process_file
 import tempfile
 import uuid
 import time
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+session_service = SessionService()
 
 
 @router.post("/upload")
 async def upload_document(
         file: UploadFile = File(...),
         # Depends(get_indexer) tells FastAPI to inject the Indexer instance
-        indexer: Indexer = Depends(get_indexer)
+        indexer: Indexer = Depends(get_indexer),
+        session_id: Optional[str] = None
 ):
     """
     Upload and process the file
@@ -27,6 +31,7 @@ async def upload_document(
         dict: A dictionary containig processed details
     """
     try:
+
         # Verify the uploaded file
         if file.filename is None:
             raise HTTPException(
@@ -84,12 +89,21 @@ async def upload_document(
             # Add chunks to vector store
             indexer.vector_store.add_documents(chunks)
 
+            if not session_id:
+                session_id = session_service.create_session(file_id)
+            elif not session_service.get_session(session_id):
+                raise HTTPException(
+                    status_code=404,
+                    detail="Session not found"
+                )
+
             return {
                 "status": "success",
                 "message": f"File {file.filename} processed and indexed sucessfully.",
                 "file_id": file_id,
                 "chunks_created": len(chunks),
-                "chunks": chunks
+                # "chunks": chunks
+                "session_id": session_id
             }
 
         finally:

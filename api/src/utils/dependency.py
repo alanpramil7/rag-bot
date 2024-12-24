@@ -11,7 +11,7 @@ class Dependency:
     _instance: Optional[Indexer] = None
 
     @classmethod
-    def get_instance(cls) -> Indexer:
+    def get_indexer_instance(cls) -> Indexer:
         """
         Get or create the Indexer instance.
         This is a class method (note the @classmethod decorator) which means it operates
@@ -37,4 +37,4 @@ def get_indexer():
     Returns:
         Indexer: The singleton Indexer instance
     """
-    return Dependency.get_instance()
+    return Dependency.get_indexer_instance()
