@@ -7,7 +7,12 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: list
     processing_time: float
-    reformulated_question: str
+    session_id: str
+
+class DocumentUploadRersponse(BaseModel):
+    status: str
+    message: str
+    file_id: str
+    chunks_created: int
     session_id: str

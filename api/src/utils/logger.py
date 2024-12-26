@@ -1,6 +1,7 @@
 import logging
 import sys
 import time
+import asyncio
 from typing import Callable, Any
 import functools
 from pathlib import Path
@@ -94,7 +95,18 @@ logger = setup_logger()
 def log_time(func: Callable) -> Callable:
     """Decorator to log function execution time"""
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        start = time.perf_counter()
+        try:
+            result = await func(*args, **kwargs)
+            logger.info(f"{func.__name__} completed in {time.perf_counter() - start:.2f}s")
+            return result
+        except Exception as e:
+            logger.error(f"{func.__name__} failed: {str(e)}")
+            raise
+
+    @functools.wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
         start = time.perf_counter()
         try:
             result = func(*args, **kwargs)
@@ -103,5 +115,8 @@ def log_time(func: Callable) -> Callable:
         except Exception as e:
             logger.error(f"{func.__name__} failed: {str(e)}")
             raise
-    return wrapper
 
+    # Return appropriate wrapper based on whether the function is async or not
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    return sync_wrapper

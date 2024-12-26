@@ -1,21 +1,29 @@
 ## Curl command for upload document
 ```bash
-curl -X 'POST' \
+ curl -X 'POST' \
   'http://localhost:8000/documents/upload' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
-  -F 'file=@/path/to/your/file.pdf'
+  -F 'file=@sample.pdf' | jq
 ```
 
 ## Curl command for chat
 ```bash
-curl -X 'POST' \
+ curl -X 'POST' \
   'http://localhost:8000/chat/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
-    "question": "What is the main topic of the document?",
-    "chat_history": [],
-    "file_id": "6d0305b2-bd79-48d1-b8ab-f9d0018c2a5f"
+    "question": "Can you help me write a sample paper accroding to this instructions?",
+    "session_id": "e6e7529e-cc64-4c01-b37c-6dd2606f86a5"
   }' | jq
+
+
+```
+
+## Curl command to get chat hisotry
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/chat/history?session_id=e6e7529e-cc64-4c01-b37c-6dd2606f86a5' \
+  -H 'accept: application/json'
 ```

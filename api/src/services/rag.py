@@ -94,14 +94,6 @@ class RAGService():
                 self.context_prompt
             )
 
-            # First, get the standalone question
-            context_chain_response = self.llm.invoke(
-                self.context_prompt.format(
-                    input=question,
-                    chat_history=chat_history
-                )
-            )
-
             # Get retriever chain response
             retriever_response = retriever_chain.invoke({
                 "input": question,
@@ -144,7 +136,6 @@ class RAGService():
                 "answer": response.get("answer", "Failed to generate an answer."),
                 "sources": sources,  # Include sources in response
                 "processing_time": processing_time,
-                "reformulated_question": context_chain_response.content  # Include reformulated question
             }
 
         except Exception as e:

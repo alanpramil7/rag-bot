@@ -4,6 +4,9 @@ from typing import Optional
 from src.config import settings
 from src.services.indexer import Indexer
 from src.utils.dependency import get_indexer
+from src.utils.logger import logger
+from src.utils.logger import log_time
+from src.models.chat import DocumentUploadRersponse
 from src.services.session import SessionService
 from src.utils.process_file import process_file
 import tempfile
@@ -14,7 +17,8 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 session_service = SessionService()
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=DocumentUploadRersponse)
+@log_time
 async def upload_document(
         file: UploadFile = File(...),
         # Depends(get_indexer) tells FastAPI to inject the Indexer instance
@@ -26,12 +30,10 @@ async def upload_document(
 
     Args:
         file (UploadFile): the file to be uploaded and processed
-
-    Returns:
-        dict: A dictionary containig processed details
     """
     try:
 
+        logger.debug(f"Processing file: {file.filename}")
         # Verify the uploaded file
         if file.filename is None:
             raise HTTPException(
@@ -41,6 +43,7 @@ async def upload_document(
 
         file_extension = Path(str(file.filename)).suffix.lower()
         if file_extension not in settings.SUPPORTED_FILE_TYPE:
+            logger.error(f"Unsupported file format: {file_extension}")
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported file types. Supported filetypes are: {', '.join(settings.SUPPORTED_FILE_TYPE.keys())}"
@@ -55,6 +58,7 @@ async def upload_document(
 
         try:
             # Process the file content
+            logger.debug(f"Extarcting document: {file.filename}")
             documents = process_file(tmp_file_path, file_extension)
 
             if not indexer.is_initialized:
@@ -67,7 +71,9 @@ async def upload_document(
                 raise RuntimeError("Vector Store is not initialized properly.")
 
             # split document into chunks
+            logger.debug("Splititng documents into chunks.")
             chunks = indexer.text_splitter.split_documents(documents)
+            logger.debug(f"Documents splitted into {len(chunks)} chunks.")
 
             # Generate unique file_id for each files
             file_id = str(uuid.uuid4())

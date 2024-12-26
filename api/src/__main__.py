@@ -4,6 +4,7 @@ from src.config import settings
 from src.routes import document
 from src.routes import rag
 
+
 def create_app() -> FastAPI:
     """
     Function to create FastAPI instance

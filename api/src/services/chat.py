@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from src.services.database import DatabaseService
 
+
 class ChatService:
     def __init__(self):
         self.db = DatabaseService()

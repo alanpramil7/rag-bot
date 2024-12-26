@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     PROJECT_ROOT: Path = Path(__file__).parent.parent  # Root directory of the project
 
     # LLM Settings
-    LLM_MODEL: str = "mistral"
+    LLM_MODEL: str = "llama3.2"
     LLM_TEMPERATURE: float = 0.5
 
     # API Server Settings
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     MODEL_CACHE: Path = PROJECT_ROOT / "cache"
 
     # Log Settings
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
 
     # Supported file type
     SUPPORTED_FILE_TYPE: Dict[str, Type[BaseLoader]] = {
