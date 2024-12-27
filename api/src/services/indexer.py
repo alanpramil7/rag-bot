@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from chromadb.config import Settings
 from langchain_text_splitters.character import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from src.utils.logger import logger
@@ -18,7 +18,7 @@ class Indexer:
 
     def __init__(self):
         self.vector_store: Optional[Chroma] = None
-        self.embedding_model: Optional[HuggingFaceEmbeddings] = None
+        self.embedding_model: Optional[OllamaEmbeddings] = None
         self.text_splitter: Optional[RecursiveCharacterTextSplitter] = None
         self.is_initialized: bool = False
         self.initialize()
@@ -72,9 +72,8 @@ class Indexer:
         """Initialize vector store component"""
         # Initialze embedding model
         # https://python.langchain.com/docs/integrations/vectorstores/chroma/
-        self.embedding_model = HuggingFaceEmbeddings(
-            model_name=settings.EMBEDDING_MODEL,
-            cache_folder=str(settings.MODEL_CACHE)
+        self.embedding_model = OllamaEmbeddings(
+            model=settings.EMBEDDING_MODEL,
         )
 
     @log_time

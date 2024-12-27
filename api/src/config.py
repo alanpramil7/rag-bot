@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     API_PORT: int = 8000  # Port number for the API server
 
     # Embedding model Settings
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-V2"
+    EMBEDDING_MODEL: str = "nomic-embed-text"
 
     # Database Settings
     DB_NAME: str = "rag.db"

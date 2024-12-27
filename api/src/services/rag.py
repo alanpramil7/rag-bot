@@ -9,6 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from src.utils.logger import log_time
 from datetime import datetime
 
+
 class RAGService():
     """Service class for Retrival-Augmented Generation"""
 
