@@ -2,12 +2,12 @@ import streamlit as st
 import requests
 import json
 from typing import Dict
-import sseclient
 
 API_BASE_URL = "http://localhost:8000"
 UPLOAD_ENDPOINT = f"{API_BASE_URL}/documents/upload"
 CHAT_ENDPOINT = f"{API_BASE_URL}/chat/stream"
 HISTORY_ENDPOINT = f"{API_BASE_URL}/chat/history"
+
 
 def initialize_session_state():
     if "messages" not in st.session_state:
@@ -16,6 +16,7 @@ def initialize_session_state():
         st.session_state.session_id = None
     if "processed_files" not in st.session_state:
         st.session_state.processed_files = set()
+
 
 def upload_file(uploaded_file) -> Dict:
     try:
@@ -55,6 +56,7 @@ def upload_file(uploaded_file) -> Dict:
         st.error(f"Error uploading file: {str(e)}")
         return None
 
+
 def get_chat_history():
     try:
         if st.session_state.session_id:
@@ -68,9 +70,13 @@ def get_chat_history():
         st.error(f"Error fetching chat history: {str(e)}")
         return []
 
+
 def stream_chat(question: str):
     try:
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+        }
         data = {
             "question": question,
             "session_id": st.session_state.session_id
@@ -84,28 +90,43 @@ def stream_chat(question: str):
         )
         response.raise_for_status()
 
-        client = sseclient.SSEClient(response)
-
         # Create a placeholder for the streaming response
         message_placeholder = st.empty()
         full_response = ""
 
-        for event in client.events():
-            if event.data:
-                try:
-                    chunk_data = json.loads(event.data)
-                    full_response += chunk_data.get("answer", "")
-                    # Update the message placeholder with the accumulated response
-                    message_placeholder.markdown(full_response + "▌")
-                except json.JSONDecodeError:
-                    continue
+        # Process the raw response content
+        for line in response.iter_lines():
+            if line:
+                # Decode the line and remove 'data: ' prefix if it exists
+                line = line.decode('utf-8')
+                if line.startswith('data: '):
+                    line = line[6:]  # Remove 'data: ' prefix
 
+                try:
+                    # Parse the JSON data
+                    if line.strip():  # Check if line is not empty
+                        chunk_data = json.loads(line)
+                        chunk_text = chunk_data.get("answer", "")
+                        if chunk_text:
+                            full_response += chunk_text
+                            # Update the message placeholder with the accumulated response
+                            message_placeholder.markdown(full_response + "▌")
+                except json.JSONDecodeError as e:
+                    print(e)
+                    continue  # Skip malformed JSON
+
+        # Display final message without cursor
         message_placeholder.markdown(full_response)
 
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        # Add the message to session state
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": full_response
+        })
 
     except Exception as e:
         st.error(f"Error in chat stream: {str(e)}")
+
 
 def main():
     st.set_page_config(
