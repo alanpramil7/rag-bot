@@ -46,7 +46,6 @@ def create_app() -> FastAPI:
                     "version": str
                 }
         """
-
         return {
             "Status": "healthy",
             "Version": settings.APP_VERSION
