@@ -97,11 +97,10 @@ async def upload_document(
 
             if not session_id:
                 session_id = session_service.create_session(file_id)
-            elif not session_service.get_session(session_id):
-                raise HTTPException(
-                    status_code=404,
-                    detail="Session not found"
-                )
+            elif session_service.get_session(session_id):
+                logger.debug("Sessio is already initiated")
+                session_service.insert_file_id(session_id, file_id)
+                logger.debug(f"New file id {file_id} is added to the session.")
 
             return {
                 "status": "success",

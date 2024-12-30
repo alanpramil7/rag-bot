@@ -2,6 +2,7 @@ import sqlite3
 from src.utils.logger import logger
 from src.config import settings
 
+
 class DatabaseService:
     """Service class for database operations"""
 
@@ -24,7 +25,7 @@ class DatabaseService:
                 # Create sessions table
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS sessions (
-                        session_id TEXT PRIMARY KEY,
+                        session_id TEXT,
                         created_at TIMESTAMP,
                         last_updated TIMESTAMP,
                         file_id TEXT NULL

@@ -44,7 +44,7 @@ class RAGService():
 
         # Prompt for answer generation
         self.qa_prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful AI assistant. Use the following context "
+            ("system", "You are a helpful AI assistant. Use the following context from document"
              "to answer the user's question accurately and concisely."),
             ("system", "Context: {context}"),
             MessagesPlaceholder(variable_name="chat_history"),
@@ -54,7 +54,7 @@ class RAGService():
     async def generate_stream_response(
         self,
         question: str,
-        file_id: Optional[str] = None,
+        file_ids: Optional[List[str]] = None,
         chat_history: List[Dict] = []
     ):
         """
@@ -70,7 +70,7 @@ class RAGService():
         try:
 
             logger.debug(f"Starting RAG pipeline for question: {question}")
-            logger.debug(f"File ID: {file_id}")
+            logger.debug(f"File ID: {file_ids}")
             logger.debug(f"Chat history length: {len(chat_history)}")
 
             if not self.indexer.is_initialized:
@@ -84,8 +84,8 @@ class RAGService():
                 "k": 3
             }
 
-            if file_id:
-                search_kwargs["filter"] = {"file_id": str(file_id)}
+            if file_ids:
+                search_kwargs["filter"] = {"file_id": {"$in": file_ids}}
 
             retriever = self.indexer.vector_store.as_retriever(
                 search_type="similarity",
@@ -174,7 +174,7 @@ class RAGService():
                 "is_complete": True
             }
 
-    @log_time
+    @ log_time
     async def generate_response(
         self,
         question: str,

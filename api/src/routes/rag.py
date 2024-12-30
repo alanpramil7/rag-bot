@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from src.services.rag import RAGService
 from src.models.chat import ChatRequest, ChatResponse
 from src.services.session import SessionService
-from src.utils.logger import logger, log_time
+from src.utils.logger import logger
 from src.services.chat import ChatService
 import json
 
@@ -26,12 +26,13 @@ async def get_chat_history(session_id: str):
             logger.error("No session id proivided for retiving chat hsitory.")
             raise HTTPException(
                 status_code=400,
-                detail="No session id provoded."
+                detail="No session id provided."
             )
 
         return chat_service.get_chat_history(session_id)
     except Exception as e:
         logger.error(f"Error while retiving the chat history: {str(e)}")
+
 
 @router.post("/stream")
 async def stream(request: ChatRequest):
@@ -59,8 +60,8 @@ async def stream(request: ChatRequest):
         chat_history = chat_service.get_chat_history(session_id)
 
         # Get file_id
-        file_id = session_service.get_file_id(session_id)[0] if session_service.get_file_id(session_id) else None
-        logger.debug(f"Retrieved file_id from session: {file_id}")
+        file_ids = session_service.get_file_id(session_id) if session_service.get_file_id(session_id) else None
+        logger.debug(f"Retrieved file_id from session: {file_ids}")
 
         # Save user message
         chat_service.save_message(
@@ -74,7 +75,7 @@ async def stream(request: ChatRequest):
             async for chunk in rag_service.generate_stream_response(
                 question=request.question,
                 chat_history=chat_history,
-                file_id=file_id
+                file_ids=file_ids
             ):
                 if chunk["is_complete"]:
                     # Save the complete response to the database
@@ -110,6 +111,7 @@ async def stream(request: ChatRequest):
             status_code=500,
             detail=f"Failed to process chat request: {str(e)}"
         )
+
 
 @router.post("/", response_model=ChatResponse)
 async def chat(request: ChatRequest):
