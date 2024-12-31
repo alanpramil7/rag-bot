@@ -139,8 +139,8 @@ async def chat(request: ChatRequest):
         chat_history = chat_service.get_chat_history(session_id)
 
         # Get file_id
-        file_id = session_service.get_file_id(session_id)[0] if session_service.get_file_id(session_id) else None
-        logger.debug(f"Retrieved file_id from session: {file_id}")
+        file_ids = session_service.get_file_id(session_id) if session_service.get_file_id(session_id) else None
+        logger.debug(f"Retrieved file_id from session: {file_ids}")
 
         # Save user message
         chat_service.save_message(
@@ -152,7 +152,7 @@ async def chat(request: ChatRequest):
         response = await rag_service.generate_response(
             question=request.question,
             chat_history=chat_history,
-            file_id=file_id
+            file_ids=file_ids
         )
 
         if not response or not isinstance(response, dict):

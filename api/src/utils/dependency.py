@@ -1,6 +1,7 @@
 from src.services.indexer import Indexer
 from typing import Optional
 
+
 class Dependency:
     """
     Provider class that manages the lifecycle of the Indexer instance.
@@ -28,6 +29,7 @@ class Dependency:
             return cls._instance
         except Exception as e:
             raise Exception(f"Error initializing Indexer: {str(e)}")
+
 
 def get_indexer():
     """

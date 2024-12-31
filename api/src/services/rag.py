@@ -174,11 +174,11 @@ class RAGService():
                 "is_complete": True
             }
 
-    @ log_time
+    @log_time
     async def generate_response(
         self,
         question: str,
-        file_id: Optional[str] = None,
+        file_ids: Optional[str] = None,
         chat_history: List[Dict] = []
     ):
         """
@@ -204,8 +204,8 @@ class RAGService():
                 "k": 3
             }
 
-            if file_id:
-                search_kwargs["filter"] = {"file_id": str(file_id)}
+            if file_ids:
+                search_kwargs["filter"] = {"file_id": {"$in": file_ids}}
 
             retriever = self.indexer.vector_store.as_retriever(
                 search_type="similarity",
