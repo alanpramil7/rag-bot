@@ -66,9 +66,7 @@ class RAGService():
             chat_history: Previous chat interactions
         """
         start_time = datetime.now()
-        sources = []
         try:
-
             logger.debug(f"Starting RAG pipeline for question: {question}")
             logger.debug(f"File ID: {file_ids}")
             logger.debug(f"Chat history length: {len(chat_history)}")
@@ -79,53 +77,15 @@ class RAGService():
             if not hasattr(self.indexer, 'vector_store') or self.indexer.vector_store is None:
                 raise ValueError("Vector store not properly initialized")
 
-            st = datetime.now()
-            search_kwargs = {
-                "k": 3
-            }
-
-            if file_ids:
-                search_kwargs["filter"] = {"file_id": {"$in": file_ids}}
-
-            retriever = self.indexer.vector_store.as_retriever(
-                search_type="similarity",
-                search_kwargs=search_kwargs
-            )
-            logger.debug(f"Retriever setup time: {(datetime.now() - st).total_seconds()}s")
+            retriver = await self._create_retiver(file_ids)
 
             st = datetime.now()
             retriever_chain = history_aware_retriever.create_history_aware_retriever(
                 self.llm,
-                retriever,
+                retriver,
                 self.context_prompt
             )
-            logger.debug(f"Retriever chain creation time: {(datetime.now() - st).total_seconds()}s")
-
-            st = datetime.now()
-            retriever_response = await retriever_chain.ainvoke({
-                "input": question,
-                "chat_history": chat_history
-            })
-            logger.debug(f"Retrival time: {(datetime.now() - st).total_seconds()}s")
-
-            # Store source documents and metadata
-            st = datetime.now()
-            source_documents = []
-            if isinstance(retriever_response, list):
-                source_documents = retriever_response
-            elif isinstance(retriever_response, dict) and "documents" in retriever_response:
-                source_documents = retriever_response["documents"]
-
-            logger.debug(f"Retrieved documents count: {len(source_documents)}")
-
-            # Prepare source information
-            for doc in source_documents:
-                source_info = {
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                }
-                sources.append(source_info)
-            logger.debug(f"Source documents time: {(datetime.now() - st).total_seconds()}s")
+            logger.debug(f"History aware chain creation time: {(datetime.now() - st).total_seconds()}s")
 
             st = datetime.now()
             qa_chain = create_stuff_documents_chain(
@@ -133,11 +93,12 @@ class RAGService():
                 self.qa_prompt,
             )
             rag_chain = create_retrieval_chain(retriever_chain, qa_chain)
-            logger.debug(f"QA Setup time: {(datetime.now() - st).total_seconds()}s")
+            logger.debug(f"Retrival chain creation time: {(datetime.now() - st).total_seconds()}s")
 
             processing_time = (datetime.now() - start_time).total_seconds()
 
             # Stream the response
+            logger.debug("Stated streaming")
             st = datetime.now()
             chunks_count = 0
             async for chunk in rag_chain.astream({
@@ -150,7 +111,6 @@ class RAGService():
                     # logger.debug(f"Streaming chunk {chunks_count}, Length: {len(chunk['answer'])}")
                     yield {
                         "answer": chunk["answer"],
-                        "sources": sources,
                         "processing_time": processing_time,
                         "is_complete": False
                     }
@@ -160,7 +120,6 @@ class RAGService():
             # Send final chunk indicating completion
             yield {
                 "answer": "",
-                "sources": sources,
                 "processing_time": processing_time,
                 "is_complete": True
             }
@@ -169,7 +128,6 @@ class RAGService():
             logger.error(f"Error generating streaming response: {str(e)}")
             yield {
                 "answer": "Error while processing your question.",
-                "sources": [],
                 "processing_time": (datetime.now() - start_time).total_seconds(),
                 "is_complete": True
             }
@@ -200,39 +158,14 @@ class RAGService():
             if not hasattr(self.indexer, 'vector_store') or self.indexer.vector_store is None:
                 raise ValueError("Vector store not properly initialized")
 
-            search_kwargs = {
-                "k": 3
-            }
-
-            if file_ids:
-                search_kwargs["filter"] = {"file_id": {"$in": file_ids}}
-
-            retriever = self.indexer.vector_store.as_retriever(
-                search_type="similarity",
-                search_kwargs=search_kwargs
-            )
+            retriver = await self._create_retiver(file_ids)
 
             # Create Retrieval chain
             retriever_chain = history_aware_retriever.create_history_aware_retriever(
                 self.llm,
-                retriever,
+                retriver,
                 self.context_prompt
             )
-
-            # Get retriever chain response
-            retriever_response = retriever_chain.invoke({
-                "input": question,
-                "chat_history": chat_history
-            })
-
-            # Store source documents and metadata
-            source_documents = []
-            if isinstance(retriever_response, list):
-                source_documents = retriever_response
-            elif isinstance(retriever_response, dict) and "documents" in retriever_response:
-                source_documents = retriever_response["documents"]
-
-            logger.debug(f"Retrieved documents count: {len(source_documents)}")
 
             qa_chain = create_stuff_documents_chain(
                 self.llm,
@@ -248,18 +181,8 @@ class RAGService():
 
             processing_time = (datetime.now() - start_time).total_seconds()
 
-            # Prepare source information
-            sources = []
-            for doc in source_documents:
-                source_info = {
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                }
-                sources.append(source_info)
-
             return {
                 "answer": response.get("answer", "Failed to generate an answer."),
-                "sources": sources,  # Include sources in response
                 "processing_time": processing_time,
             }
 
@@ -270,3 +193,17 @@ class RAGService():
                 "sources": [],
                 "processing_time": (datetime.now() - start_time).total_seconds()
             }
+
+    @log_time
+    async def _create_retiver(self, file_ids: Optional[List[str]] = None):
+        search_kwargs = {
+            "k": 3
+        }
+        if file_ids:
+            search_kwargs["filter"] = {"file_id": {"$in": file_ids}}
+
+        retriever = self.indexer.vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs=search_kwargs
+        )
+        return retriever

@@ -98,7 +98,7 @@ async def upload_document(
             if not session_id:
                 session_id = session_service.create_session(file_id)
             elif session_service.get_session(session_id):
-                logger.debug("Sessio is already initiated")
+                logger.debug("Session is already initiated")
                 session_service.insert_file_id(session_id, file_id)
                 logger.debug(f"New file id {file_id} is added to the session.")
 
@@ -107,7 +107,6 @@ async def upload_document(
                 "message": f"File {file.filename} processed and indexed sucessfully.",
                 "file_id": file_id,
                 "chunks_created": len(chunks),
-                # "chunks": chunks
                 "session_id": session_id
             }
 
