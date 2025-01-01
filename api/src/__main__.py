@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config import settings
 from src.routes import document
 from src.routes import rag
+from src.routes import website
 
 
 def create_app() -> FastAPI:
@@ -32,6 +33,9 @@ def create_app() -> FastAPI:
 
     # Include RAG route
     application.include_router(rag.router)
+
+    # Include Website route
+    application.include_router(website.router)
 
     # Endpoint to check application health
     @application.get("/check-health")
